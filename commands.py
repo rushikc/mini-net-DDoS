@@ -13,6 +13,8 @@ sudo mn --topo linear,4
 #Creates a network with predefined depth and fanout
 sudo mn --topo tree,depth=2,fanout=2
 
+#open mininet editor
+sudo python /home/rushi/sdn/mininet/examples/miniedit.py
 
 sudo mun -c #clears all mininet cache
 
