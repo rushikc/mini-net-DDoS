@@ -37,7 +37,7 @@ def topology():
     s2 = net.addSwitch( 's2', protocols='OpenFlow10', listenPort=6672)
     s1 = net.addSwitch( 's1', protocols='OpenFlow10', listenPort=6671)
 
-    c4 = net.addController( 'c4', ip='127.0.0.1', port=6633 )
+    c4 = net.addController( 'c4', ip='127.0.0.1', port=6343 )
 
  
 
