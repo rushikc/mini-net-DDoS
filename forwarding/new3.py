@@ -304,28 +304,6 @@ def _handle_PacketIn (event):
 
    packet = event.parsed
 
-   def drop (duration = None):
-    """
-    Drops this packet and optionally installs a flow to continue
-    dropping similar ones for a while
-    """
-    if duration is not None:
-      if not isinstance(duration, tuple):
-        duration = (duration,duration)
-      msg = of.ofp_flow_mod()
-      msg.match = of.ofp_match.from_packet(packet)
-      msg.idle_timeout = duration[0]
-      msg.hard_timeout = duration[1]
-      msg.buffer_id = event.ofp.buffer_id
-      event.connection.send(msg)
-    elif event.ofp.buffer_id is not None:
-      msg = of.ofp_packet_out()
-      msg.buffer_id = event.ofp.buffer_id
-      msg.in_port = event.port
-      event.connection.send(msg) 
-
-
-
    if not packet.parsed:
 
       # log.warning("%i %i ignoring unparsed packet", dpid, inport)
@@ -347,16 +325,6 @@ def _handle_PacketIn (event):
    
 
    if not a: return
-
-   global flag
-   if flag == 1:
-    print 'dropping'
-    # print count
-    drop(30)
-    flag = 0
-    # count+=1
-    return
-
  
 
    # log.info("%s ARP %s %s => %s", dpid_to_str(dpid),
@@ -439,12 +407,16 @@ def timer_func ():
 
 ls = []
 avg = 0
-flag = 0
-def ddos_analyser(n1,event):
-  global ls
-  global flag
-  
+rx_packets = 0
 
+diff = 0
+
+stat_dict = {}
+port_to_ip={1:'10.0.0.1',2:'10.0.0.2',3:'10.0.0.3',4:'10.0.0.4',5:'10.0.0.5',6:'10.0.0.6'}
+
+
+def ddos_analyser(n1):
+  global ls
   global avg
   # avg1 = int(sum(ls)/len(ls))
 
@@ -458,12 +430,13 @@ def ddos_analyser(n1,event):
     avg = int(sum(ls)/len(ls))
   else:
     if n1 > (3*avg):
-      print '\nDDoS\n'
-      core.openflow.sendToDPID(switch9, flow9msg)
-      print 'sleeping...'
+      print '\n   ..............DDoS attack detected................    \n'
+      core.openflow.sendToDPID(switch9, flow9msg) # drop 
+      print 'Dropping packets for next 30 secs.........'
+      ddos_source(avg)
       time.sleep(30)
       print 'waking.....'
-      core.openflow.sendToDPID(switch2, flow2msg)
+      core.openflow.sendToDPID(switch2, flow2msg) # restore regular flow
 
     else:
 
@@ -474,34 +447,113 @@ def ddos_analyser(n1,event):
         ls.append(n1)
       avg = int(sum(ls)/len(ls))
 
-      print 'Normal'
+      print '********************   Normal Flow   *************************'
   print avg
   print ls
 
 
 
+def ddos_source(avg):
+  global stat_dict
+  global port_to_ip
 
-rx_packets = 0
-diff = 0
+  ddos_port = []
+  ddos_ip = []
+
+  print stat_dict
+  for st1 in stat_dict.keys():
+    if stat_dict[st1][1] > avg:
+      ddos_port.append(st1)
+      ddos_ip.append(port_to_ip[st1])
+
+  for k in range(len(ddos_ip)):
+    print "Attack is originated from ==> ",ddos_ip[k]
+    print "Restricting access to IP ==> ",ddos_ip[k]
+  # print ddos_ip
+  # print ddos_port
+  ddos_mitigation(ddos_ip,ddos_port)
+
+
+def ddos_mitigation(ddos_ip,ddos_port):
+  # # print 'hey'
+  k=1
+  # for k in range(len(ddos_ip)):
+  #   #flow3:
+  #   print 'Installing'
+
+  #   switch10 = 0000000000000003
+
+  #   flow10msg = of.ofp_flow_mod()
+
+  #   flow10msg.cookie = 0
+
+  #   # flow10msg.match.in_port = ddos_port[k]
+
+  #   flow10msg.match.dl_type = 0x0800
+
+  #   # flow10msg.match.nw_dst = IPAddr("10.0.0.7")
+  #   flow10msg.match.nw_src = IPAddr("10.0.0.4")
+
+  #   # ACTIONS---------------------------------
+
+  #   flow10out = of.ofp_action_output (port = 7)
+
+  #   flow10dstIP = of.ofp_action_nw_addr.set_dst(IPAddr("10.0.0.8"))
+
+  #   flow10srcMAC = of.ofp_action_dl_addr.set_src(EthAddr("00:00:00:00:00:04"))
+
+  #   flow10dstMAC = of.ofp_action_dl_addr.set_dst(EthAddr("00:00:00:00:00:08"))
+
+  #   flow10msg.actions = [flow10dstIP, flow10srcMAC, flow10dstMAC, flow10out]
+
+  #   core.openflow.sendToDPID(switch10, flow10msg)
+
+
+
+
+
+
+
+
 # handler to display port statistics received in JSON format
 def handle_portstats_received (event):
   stats = flow_stats_to_list(event.stats)
   # st1 = stats[0]
   global rx_packets
   global diff
+  global stat_dict 
 
+
+
+  #collecting stats for all hosts
+  for st1 in stats:
+    if st1['port_no'] < 6 :
+      pno = st1['port_no']
+      if pno in stat_dict.keys():
+        diff1 = st1['tx_packets']-stat_dict[pno][0]
+        stat_dict[pno] = [st1['tx_packets'],diff1]
+      else:
+        stat_dict[pno] = [st1['tx_packets'],0]
+
+
+  print stat_dict
+  # collecting stats for our server i.e port 6 (h6)
   for st1 in stats:
     if st1['port_no'] == 6:
       if rx_packets != 0:
         diff = st1['rx_packets']-rx_packets
 
       rx_packets = st1['rx_packets']
-      # print rx_packets
-
       if diff != 0:
-        print diff
-        ddos_analyser(diff, event)
+        # print diff
+        ddos_analyser(diff)
 
+  
+
+
+
+
+      
 
 
 
@@ -511,6 +563,8 @@ def launch ():
    # log.info("*** Starting... ***")
 
    # log.info("*** Waiting for switches to connect.. ***")
+
+   print "once again"
 
    core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
 
