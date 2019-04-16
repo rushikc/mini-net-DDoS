@@ -53,6 +53,21 @@ sudo ovs-vsctl -- --id=@s create sFlow agent=s3-eth5 target=\"172.16.104.128:634
 sudo ovs-vsctl -- --id=@s create sFlow agent=s3-eth6 target=\"172.16.104.128:6343\" header=128 polling=10 -- set Bridge s3 sflow=@s
 
 
+sudo ifconfig s3-eth1 172.16.1.1 netmask 255.255.255.0
+sudo ifconfig s3-eth2 172.16.2.1 netmask 255.255.255.0
+sudo ifconfig s3-eth3 172.16.3.1 netmask 255.255.255.0
+sudo ifconfig s3-eth4 172.16.4.1 netmask 255.255.255.0
+sudo ifconfig s3-eth5 172.16.5.1 netmask 255.255.255.0
+sudo ifconfig s3-eth6 172.16.6.1 netmask 255.255.255.0
+sudo ovs-vsctl -- --id=@s create sFlow agent=s3-eth1 target=\"172.16.104.128:6343\" header=128 polling=1 -- set Bridge s3 sflow=@s
+sudo ovs-vsctl -- --id=@s create sFlow agent=s3-eth2 target=\"172.16.104.128:6343\" header=128 polling=1 -- set Bridge s3 sflow=@s
+sudo ovs-vsctl -- --id=@s create sFlow agent=s3-eth3 target=\"172.16.104.128:6343\" header=128 polling=1 -- set Bridge s3 sflow=@s
+sudo ovs-vsctl -- --id=@s create sFlow agent=s3-eth4 target=\"172.16.104.128:6343\" header=128 polling=1 -- set Bridge s3 sflow=@s
+sudo ovs-vsctl -- --id=@s create sFlow agent=s3-eth5 target=\"172.16.104.128:6343\" header=128 polling=1 -- set Bridge s3 sflow=@s
+sudo ovs-vsctl -- --id=@s create sFlow agent=s3-eth6 target=\"172.16.104.128:6343\" header=128 polling=1 -- set Bridge s3 sflow=@s
+
+
+
 
 
 ./pox.py --verbose openflow.of_01 --port=6343 forwarding.new3

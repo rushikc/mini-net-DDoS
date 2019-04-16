@@ -486,21 +486,25 @@ diff = 0
 # handler to display port statistics received in JSON format
 def handle_portstats_received (event):
   stats = flow_stats_to_list(event.stats)
-  st1 = stats[0]
+  # st1 = stats[0]
   global rx_packets
   global diff
 
-  if rx_packets != 0:
-    diff = st1['rx_packets']-rx_packets
+  for st1 in stats:
+    if st1['port_no'] == 6:
+      if rx_packets != 0:
+        diff = st1['rx_packets']-rx_packets
 
-  rx_packets = st1['rx_packets']
+      rx_packets = st1['rx_packets']
+      # print rx_packets
 
-  if diff != 0:
-    print diff
-    ddos_analyser(diff, event)
+      if diff != 0:
+        print diff
+        ddos_analyser(diff, event)
 
-  # log.debug("PortStatsReceived Rx packets %s: %s", 
-    # dpidToStr(event.connection.dpid), rx_packets)
+
+
+
 
 def launch ():
 
