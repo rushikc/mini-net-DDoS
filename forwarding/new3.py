@@ -2,24 +2,16 @@
 
 
 from pox.core import core
-
 from pox.lib.addresses import IPAddr
-
 from pox.lib.addresses import EthAddr
-
 import pox.openflow.libopenflow_01 as of
-
 from pox.lib.util import dpid_to_str, str_to_bool
-
 from pox.lib.packet.arp import arp
-
 from pox.lib.packet.ethernet import ethernet, ETHER_BROADCAST
-
 import time
 
-
-
-  
+from pox.lib.util import dpidToStr
+from pox.openflow.of_json import *
 from pox.lib.revent import *  
 from pox.lib.recoco import Timer  
 from collections import defaultdict  
@@ -257,6 +249,46 @@ flow9dstMAC = of.ofp_action_dl_addr.set_dst(EthAddr("00:00:00:00:00:06"))
 flow9msg.actions = [flow9dstIP, flow9srcMAC, flow9dstMAC, flow9out]
 
 
+
+#flow4:
+
+switch10 = 0000000000000003
+
+flow10msg = of.ofp_flow_mod()
+
+flow10msg.cookie = 0
+
+flow10msg.match.in_port = 6
+
+flow10msg.match.dl_type = 0x0800
+
+flow10msg.match.nw_src = IPAddr("10.0.0.6")
+flow10msg.match.nw_dst = IPAddr("10.0.0.3")
+
+# ACTIONS---------------------------------
+
+flow10out = of.ofp_action_output (port = 3)
+
+flow10srcIP = of.ofp_action_nw_addr.set_src(IPAddr("10.0.0.8"))
+
+flow10srcMAC = of.ofp_action_dl_addr.set_src(EthAddr("00:00:00:00:00:03"))
+
+flow10dstMAC = of.ofp_action_dl_addr.set_dst(EthAddr("00:00:00:00:00:03"))
+
+flow10msg.actions = [flow10srcIP, flow10srcMAC, flow10dstMAC, flow10out]
+
+
+
+ls = []
+stat_dict = {}
+port_to_ip={1:'10.0.0.1',2:'10.0.0.2',3:'10.0.0.3',4:'10.0.0.4',5:'10.0.0.5',6:'10.0.0.6'}
+ddos_port = []
+ddos_ip = []
+avg = 0
+rx_packets = 0
+diff = 0
+
+
 def install_flows():
 
    # log.info("    *** Installing static flows... ***")
@@ -264,140 +296,74 @@ def install_flows():
    # Push flows to switches
 
    core.openflow.sendToDPID(switch2, flow2msg)
-
    core.openflow.sendToDPID(switch3, flow3msg)
    core.openflow.sendToDPID(switch4, flow4msg)
    core.openflow.sendToDPID(switch5, flow5msg)
    core.openflow.sendToDPID(switch6, flow6msg)
    core.openflow.sendToDPID(switch7, flow7msg)
    core.openflow.sendToDPID(switch8, flow8msg)
+   core.openflow.sendToDPID(switch10, flow10msg)
 
-   # log.info("    *** Static flows installed. ***")
 
  
 
 def _handle_ConnectionUp (event):
-
-   # log.info("*** install flows ***")
-
    install_flows()
 
 
 
 
-count = 1
-
 def _handle_PacketIn (event):
 
-   #log.info("*** _handle_PacketIn... ***")
-
    dpid = event.connection.dpid
-
-   # print "inside _handle_PacketIn"
-
-
-   global count
-   # print count
-   # print rx_packets
-   count+=1
    inport = event.port
-
    packet = event.parsed
 
    if not packet.parsed:
-
-      # log.warning("%i %i ignoring unparsed packet", dpid, inport)
-
       return
 
- 
-
-   a = packet.find('arp')
-
-   dst_ip = ""
-   dst_ip = ""
-   src_ip = ""
-   if packet.type == packet.IP_TYPE:
-      packet_ip = event.parsed.find("ipv4")
-      src_ip = packet_ip.srcip
-      dst_ip = packet_ip.dstip
-
-   
+   a = packet.find('arp')   
 
    if not a: return
- 
 
-   # log.info("%s ARP %s %s => %s", dpid_to_str(dpid),
+   global ddos_ip
+   if str(a.protosrc) in ddos_ip :
+        return
 
-   #    {arp.REQUEST:"request",arp.REPLY:"reply"}.get(a.opcode,
-
-   #    'op:%i' % (a.opcode,)), str(a.protosrc), str(a.protodst))
-
-    
 
    if a.prototype == arp.PROTO_TYPE_IP:
-
      if a.hwtype == arp.HW_TYPE_ETHERNET:
-
        if a.opcode == arp.REQUEST:
-
         r = arp()
-
         r.hwtype = a.hwtype
-
         r.prototype = a.prototype
-
         r.hwlen = a.hwlen
-
         r.protolen = a.protolen
-
         r.opcode = arp.REPLY
-
         r.hwdst = a.hwsrc
-
         r.protodst = a.protosrc
-
         r.protosrc = a.protodst
 
         if str(a.protodst)=="10.0.0.1":
-
           r.hwsrc = EthAddr("00:00:00:00:00:03")
 
         if str(a.protodst)=="10.0.0.7":
-
           r.hwsrc = EthAddr("00:00:00:00:00:04")
 
-        e = ethernet(type=packet.type, src=r.hwsrc,
 
-                        dst=a.hwsrc)
-
+        e = ethernet(type=packet.type, src=r.hwsrc,dst=a.hwsrc)
         e.payload = r
-
-        # log.info("%s answering ARP for %s" % (dpid_to_str(dpid),
-
-        #     str(r.protosrc)))
-
         msg = of.ofp_packet_out()
-
         msg.data = e.pack()
-
-        msg.actions.append(of.ofp_action_output(port =
-
-                                                of.OFPP_IN_PORT))                            
-
+        msg.actions.append(of.ofp_action_output(port = of.OFPP_IN_PORT))                            
         msg.in_port = inport
-
         event.connection.send(msg)
 
-from pox.lib.util import dpidToStr
-from pox.openflow.of_json import *
+
+
 
 def timer_func ():
-
   con = core.openflow._connections
-  # print "hey"
-
-  # print con[2]
   connection = con[3]
   # connection.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
   connection.send(of.ofp_stats_request(body=of.ofp_port_stats_request()))
@@ -405,20 +371,11 @@ def timer_func ():
 
 
 
-ls = []
-avg = 0
-rx_packets = 0
-
-diff = 0
-
-stat_dict = {}
-port_to_ip={1:'10.0.0.1',2:'10.0.0.2',3:'10.0.0.3',4:'10.0.0.4',5:'10.0.0.5',6:'10.0.0.6'}
 
 
 def ddos_analyser(n1):
   global ls
   global avg
-  # avg1 = int(sum(ls)/len(ls))
 
   if avg == 0:
     if len(ls) == 20:
@@ -431,9 +388,9 @@ def ddos_analyser(n1):
   else:
     if n1 > (3*avg):
       print '\n   ..............DDoS attack detected................    \n'
-      core.openflow.sendToDPID(switch9, flow9msg) # drop 
-      print 'Dropping packets for next 30 secs.........'
-      ddos_source(avg)
+      core.openflow.sendToDPID(switch9, flow9msg) # drop packets for next 't' sec
+      print '\n.............Dropping packets for next 30 secs...........\n'
+      ddos_mitigation(avg)
       time.sleep(30)
       print 'waking.....'
       core.openflow.sendToDPID(switch2, flow2msg) # restore regular flow
@@ -447,70 +404,34 @@ def ddos_analyser(n1):
         ls.append(n1)
       avg = int(sum(ls)/len(ls))
 
-      print '********************   Normal Flow   *************************'
+      print '\n********************   Normal Flow   *************************'
   print avg
   print ls
 
 
 
-def ddos_source(avg):
+def ddos_mitigation(avg):
   global stat_dict
   global port_to_ip
 
-  ddos_port = []
-  ddos_ip = []
+  global ddos_port
+  global ddos_ip
 
-  print stat_dict
+  t_port = []
+  t_ip = []
+
+  # print stat_dict
   for st1 in stat_dict.keys():
     if stat_dict[st1][1] > avg:
       ddos_port.append(st1)
       ddos_ip.append(port_to_ip[st1])
-
-  for k in range(len(ddos_ip)):
-    print "Attack is originated from ==> ",ddos_ip[k]
-    print "Restricting access to IP ==> ",ddos_ip[k]
-  # print ddos_ip
-  # print ddos_port
-  ddos_mitigation(ddos_ip,ddos_port)
+      t_port.append(st1)
+      t_ip.append(port_to_ip[st1])
 
 
-def ddos_mitigation(ddos_ip,ddos_port):
-  # # print 'hey'
-  k=1
-  # for k in range(len(ddos_ip)):
-  #   #flow3:
-  #   print 'Installing'
-
-  #   switch10 = 0000000000000003
-
-  #   flow10msg = of.ofp_flow_mod()
-
-  #   flow10msg.cookie = 0
-
-  #   # flow10msg.match.in_port = ddos_port[k]
-
-  #   flow10msg.match.dl_type = 0x0800
-
-  #   # flow10msg.match.nw_dst = IPAddr("10.0.0.7")
-  #   flow10msg.match.nw_src = IPAddr("10.0.0.4")
-
-  #   # ACTIONS---------------------------------
-
-  #   flow10out = of.ofp_action_output (port = 7)
-
-  #   flow10dstIP = of.ofp_action_nw_addr.set_dst(IPAddr("10.0.0.8"))
-
-  #   flow10srcMAC = of.ofp_action_dl_addr.set_src(EthAddr("00:00:00:00:00:04"))
-
-  #   flow10dstMAC = of.ofp_action_dl_addr.set_dst(EthAddr("00:00:00:00:00:08"))
-
-  #   flow10msg.actions = [flow10dstIP, flow10srcMAC, flow10dstMAC, flow10out]
-
-  #   core.openflow.sendToDPID(switch10, flow10msg)
-
-
-
-
+  for k in range(len(t_ip)):
+    print "Attack is originated from ==> ",t_ip[k]
+    print "Restricting access to IP ==> ",t_ip[k]
 
 
 
@@ -536,7 +457,7 @@ def handle_portstats_received (event):
         stat_dict[pno] = [st1['tx_packets'],0]
 
 
-  print stat_dict
+  # print stat_dict
   # collecting stats for our server i.e port 6 (h6)
   for st1 in stats:
     if st1['port_no'] == 6:
@@ -551,23 +472,9 @@ def handle_portstats_received (event):
   
 
 
-
-
-      
-
-
-
-
 def launch ():
 
-   # log.info("*** Starting... ***")
-
-   # log.info("*** Waiting for switches to connect.. ***")
-
-   print "once again"
-
    core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
-
    core.openflow.addListenerByName("PacketIn", _handle_PacketIn)
    # core.openflow.addListenerByName("FlowStatsReceived", 
    #  _handle_flowstats_received) 
