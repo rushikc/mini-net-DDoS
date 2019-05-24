@@ -31,7 +31,9 @@ ITGSend -a 10.0.0.7 -T UDP -C 10 -c 12
 
 
 sudo mun -c #clears all mininet cache
-
+python sudo mini3.py
+./pox.py --verbose openflow.of_01 --port=6343 forwarding.new3
+h1 ping 10.0.0.7
 h1 ping -c 3 -i 3  h2  # -c counts -i interval in sec
 
 tcpdump -XX -n -i h2-eth0 #to listen all tcp ping message

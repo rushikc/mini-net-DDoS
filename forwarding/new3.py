@@ -1,6 +1,4 @@
 #!/usr/bin/python
-
-
 from pox.core import core
 from pox.lib.addresses import IPAddr
 from pox.lib.addresses import EthAddr
@@ -9,7 +7,6 @@ from pox.lib.util import dpid_to_str, str_to_bool
 from pox.lib.packet.arp import arp
 from pox.lib.packet.ethernet import ethernet, ETHER_BROADCAST
 import time
-
 from pox.lib.util import dpidToStr
 from pox.openflow.of_json import *
 from pox.lib.revent import *  
@@ -48,7 +45,7 @@ flow2srcMAC = of.ofp_action_dl_addr.set_src(EthAddr("00:00:00:00:00:04"))
 flow2dstMAC = of.ofp_action_dl_addr.set_dst(EthAddr("00:00:00:00:00:06"))
 
 flow2msg.actions = [flow2dstIP, flow2srcMAC, flow2dstMAC, flow2out]
-
+ 
  
 
 #flow4:
@@ -181,13 +178,9 @@ flow7msg.match.nw_dst = IPAddr("10.0.0.5")
 # ACTIONS---------------------------------
 
 flow7out = of.ofp_action_output (port = 5)
-
 flow7srcIP = of.ofp_action_nw_addr.set_src(IPAddr("10.0.0.7"))
-
 flow7srcMAC = of.ofp_action_dl_addr.set_src(EthAddr("00:00:00:00:00:03"))
-
 flow7dstMAC = of.ofp_action_dl_addr.set_dst(EthAddr("00:00:00:00:00:05"))
-
 flow7msg.actions = [flow7srcIP, flow7srcMAC, flow7dstMAC, flow7out]
 
 
@@ -289,12 +282,7 @@ rx_packets = 0
 diff = 0
 
 
-def install_flows():
-
-   # log.info("    *** Installing static flows... ***")
-
-   # Push flows to switches
-
+def install_rules():
    core.openflow.sendToDPID(switch2, flow2msg)
    core.openflow.sendToDPID(switch3, flow3msg)
    core.openflow.sendToDPID(switch4, flow4msg)
@@ -308,7 +296,7 @@ def install_flows():
  
 
 def _handle_ConnectionUp (event):
-   install_flows()
+   install_rules()
 
 
 
@@ -360,17 +348,12 @@ def _handle_PacketIn (event):
         event.connection.send(msg)
 
 
-
-
 def timer_func ():
   con = core.openflow._connections
   connection = con[3]
   # connection.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
   connection.send(of.ofp_stats_request(body=of.ofp_port_stats_request()))
   
-
-
-
 
 
 def ddos_analyser(n1):

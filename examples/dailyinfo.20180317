@@ -1,0 +1,27 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN"><html>
+<title>Directory listing for /</title>
+<body>
+<h2>Directory listing for /</h2>
+<hr>
+<ul>
+<li><a href="commands.py">commands.py</a>
+<li><a href="commands_vinnu.py">commands_vinnu.py</a>
+<li><a href="complex_topo.py">complex_topo.py</a>
+<li><a href="dailyinfo.20180317">dailyinfo.20180317</a>
+<li><a href="ddos_traffic.py">ddos_traffic.py</a>
+<li><a href="http_ddos.sh">http_ddos.sh</a>
+<li><a href="http_normal.sh">http_normal.sh</a>
+<li><a href="lineartopo.py">lineartopo.py</a>
+<li><a href="mini1.py">mini1.py</a>
+<li><a href="mini2.py">mini2.py</a>
+<li><a href="mini3.py">mini3.py</a>
+<li><a href="mininetedit.mn">mininetedit.mn</a>
+<li><a href="normal_traffic.py">normal_traffic.py</a>
+<li><a href="ping_traffic.py">ping_traffic.py</a>
+<li><a href="rushi_mininet.py">rushi_mininet.py</a>
+<li><a href="simple-topo-2host.py">simple-topo-2host.py</a>
+<li><a href="wget.log">wget.log</a>
+</ul>
+<hr>
+</body>
+</html>
